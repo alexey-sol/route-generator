@@ -1,11 +1,6 @@
-import typescriptPlugin from "@typescript-eslint/eslint-plugin";
+import { baseEslintConfig, baseJsonConfig, basePrettierConfig } from "./src/eslint/eslint.base";
 import auto from "eslint-config-canonical/auto";
 import { defineConfig, globalIgnores } from "eslint/config";
-import {
-    baseEslintConfig,
-    baseJsonConfig,
-    basePrettierConfig,
-} from "route-generator-util/eslint/eslint.base";
 
 export default defineConfig([
     globalIgnores(["dist", "package-lock.json"]),
@@ -16,12 +11,6 @@ export default defineConfig([
             parserOptions: {
                 project: ["tsconfig.json", "tsconfig.eslint.json"],
             },
-        },
-        plugins: {
-            "@typescript-eslint": typescriptPlugin,
-        },
-        rules: {
-            "@typescript-eslint/no-extraneous-class": ["error", { allowEmpty: true }],
         },
     },
     ...baseJsonConfig,

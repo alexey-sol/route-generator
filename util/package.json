@@ -1,0 +1,59 @@
+{
+    "name": "route-generator-util",
+    "version": "0.0.0",
+    "private": true,
+    "engines": {
+        "npm": ">=11.0.0 <12.0.0",
+        "node": ">=24.0.0 <25.0.0"
+    },
+    "license": "UNLICENSED",
+    "main": "dist/esm/index.js",
+    "types": "dist/dts/index.d.ts",
+    "sideEffects": [
+        "**/*.d.ts"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/dts/index.d.ts",
+            "require": "./dist/cjs/index.js",
+            "import": "./dist/esm/index.js",
+            "default": "./dist/esm/index.js"
+        },
+        "./eslint/*": {
+            "types": "./dist/dts/eslint/*.js",
+            "require": "./dist/cjs/eslint/*.js",
+            "import": "./dist/esm/eslint/*.js",
+            "default": "./dist/esm/eslint/*.js"
+        },
+        "./tsconfig/*": {
+            "import": "./dist/tsconfig/*",
+            "default": "./dist/tsconfig/*"
+        }
+    },
+    "scripts": {
+        "build": "npm run build:dts && npm run build:esm && npm run build:cjs",
+        "build:dts": "tsc --project tsconfig.dts.json && tsc-alias -v --dir dist/dts -p tsconfig.dts.json",
+        "build:esm": "node tools/esbuild.esm.mjs",
+        "build:cjs": "node tools/esbuild.cjs.mjs",
+        "copy:package": "copyfiles -u 2 src/package/**/*.{json,md} dist",
+        "copy:tsconfig": "copyfiles -u 1 src/tsconfig/*.json dist",
+        "prebuild": "rimraf dist",
+        "postbuild": "npm run copy:package && npm run copy:tsconfig",
+        "prepare": "npm run build",
+        "lint": "eslint .",
+        "lint:fix": "npm run lint -- --fix",
+        "lint:pre-commit": "npm run lint:fix",
+        "pre-commit": "lint-staged"
+    },
+    "lint-staged": {
+        "*.{js,mjs,ts,mts,json}": [
+            "npm run lint:pre-commit"
+        ]
+    },
+    "devDependencies": {
+        "copyfiles": "2.4.1",
+        "esbuild": "0.27.0",
+        "esbuild-node-externals": "1.20.1",
+        "glob": "13.0.0"
+    }
+}

@@ -1,3 +1,5 @@
 {
-    "include": ["eslint.config.ts"]
+    "include": [
+        "eslint.config.ts"
+    ]
 }

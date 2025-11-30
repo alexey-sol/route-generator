@@ -1,0 +1,37 @@
+{
+    "name": "route-generator",
+    "workspaces": [
+        "util",
+        "api",
+        "client-web"
+    ],
+    "author": "Alexey Soloviev",
+    "private": true,
+    "engines": {
+        "npm": ">=11.0.0 <12.0.0",
+        "node": ">=24.0.0 <25.0.0"
+    },
+    "scripts": {
+        "build": "npm run build --ws",
+        "postinstall": "npm run build",
+        "test": "npm run test --ws",
+        "lint": "npm run lint --ws",
+        "lint:fix": "npm run lint:fix --ws",
+        "pre-commit": "npm run pre-commit --ws",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@eslint/js": "9.39.1",
+        "@typescript-eslint/eslint-plugin": "8.48.0",
+        "eslint": "9.39.1",
+        "eslint-config-canonical": "47.3.6",
+        "eslint-import-resolver-typescript": "4.4.4",
+        "globals": "16.4.0",
+        "husky": "9.1.7",
+        "lint-staged": "16.2.7",
+        "rimraf": "6.1.2",
+        "tsc-alias": "1.8.16",
+        "typescript": "5.9.3",
+        "typescript-eslint": "8.48.0"
+    }
+}

@@ -1,7 +1,7 @@
-import App from "./App.tsx";
+import App from "./app.tsx";
 import { StrictMode } from "react";
-import "./index.css"; // eslint-disable-line import/no-unassigned-import
 import { createRoot } from "react-dom/client";
+import "./index.css";
 
 const root = document.querySelector("#root");
 

@@ -1,64 +1,59 @@
-import js from "@eslint/js";
+import css from "@eslint/css";
+import { react, vitest } from "eslint-config-canonical";
 import auto from "eslint-config-canonical/auto";
-import { recommended as prettier } from "eslint-config-canonical/prettier";
-import { recommended as react } from "eslint-config-canonical/react";
-import { recommended as typescript } from "eslint-config-canonical/typescript";
-import { recommended as vitest } from "eslint-config-canonical/vitest";
-import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 import reactRefresh from "eslint-plugin-react-refresh";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
-import tseslint from "typescript-eslint";
+import {
+    baseEslintConfig,
+    baseJsonConfig,
+    basePrettierConfig,
+} from "route-generator-util/eslint/eslint.base";
 
 export default defineConfig([
-    globalIgnores(["dist"]),
+    globalIgnores(["dist", "package-lock.json"]),
+    ...auto,
+    ...vitest.recommended,
+    reactRefresh.configs.vite,
+    ...baseEslintConfig,
     {
-        extends: [
-            js.configs.recommended,
-            tseslint.configs.recommended,
-            reactRefresh.configs.vite,
-            auto,
-            typescript,
-            react,
-            vitest,
-            prettier,
-        ],
-        files: ["**/*.{js,jsx}", "**/*.{ts,tsx}"],
         languageOptions: {
-            ecmaVersion: 2_020,
             globals: globals.browser,
             parserOptions: {
                 project: ["tsconfig.app.json", "tsconfig.node.json", "tsconfig.eslint.json"],
             },
         },
-
-        rules: {
-            "prettier/prettier": [
-                2,
-                {
-                    arrowParens: "always",
-                    bracketSameLine: false,
-                    bracketSpacing: true,
-                    endOfLine: "lf",
-                    printWidth: 100,
-                    proseWrap: "preserve",
-                    quoteProps: "as-needed",
-                    semi: true,
-                    singleAttributePerLine: true,
-                    singleQuote: false,
-                    tabWidth: 4,
-                    trailingComma: "all",
-                    useTabs: false,
+    },
+    {
+        extends: [...react.recommended],
+        files: ["**/*.{jsx,tsx}"],
+        languageOptions: {
+            parserOptions: {
+                ecmaFeatures: {
+                    jsx: true,
                 },
-                { usePrettierrc: false },
-            ],
+            },
         },
         settings: {
-            "import-x/resolver-next": [
-                createTypeScriptImportResolver({
-                    alwaysTryTypes: true,
-                }),
-            ],
+            react: {
+                version: "detect",
+            },
         },
     },
+    {
+        extends: [css.configs.recommended],
+        files: ["**/*.css"],
+        language: "css/css",
+        plugins: {
+            css,
+        },
+    },
+    ...baseJsonConfig,
+    {
+        files: ["vite.config.ts"],
+        rules: {
+            "import/no-cycle": "off", // this rule mysteriously breaks linter in vite.config.ts
+        },
+    },
+    ...basePrettierConfig,
 ]);
