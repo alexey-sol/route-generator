@@ -17,6 +17,18 @@ class EnvironmentVariables {
 
     @IsEnum(Environment)
     NODE_ENV: Environment;
+
+    @IsNotEmpty()
+    @IsString()
+    OPENAI_API_KEY: string;
+
+    @IsNotEmpty()
+    @IsString()
+    OPENAI_BASE_URL: string;
+
+    @IsNotEmpty()
+    @IsString()
+    OPENAI_MODEL: string;
 }
 
 export const validate = (config: Record<string, unknown>) => {

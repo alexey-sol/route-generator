@@ -2,16 +2,29 @@ import { type Environment } from "./config.const";
 import { env as environment } from "./env.validation";
 import { registerAs } from "@nestjs/config";
 
-type GigachatConfig = {
+type BaseChatConfig = {
     apiKey: string;
     model: string;
 };
 
 export const gigachatConfig = registerAs(
     "gigachat",
-    (): GigachatConfig => ({
+    (): BaseChatConfig => ({
         apiKey: environment.GIGACHAT_API_KEY,
         model: environment.GIGACHAT_MODEL,
+    }),
+);
+
+type OpenAiConfig = BaseChatConfig & {
+    baseUrl: string;
+};
+
+export const openAiConfig = registerAs(
+    "openAi",
+    (): OpenAiConfig => ({
+        apiKey: environment.OPENAI_API_KEY,
+        baseUrl: environment.OPENAI_BASE_URL,
+        model: environment.OPENAI_MODEL,
     }),
 );
 
