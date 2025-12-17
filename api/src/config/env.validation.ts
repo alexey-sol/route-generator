@@ -20,6 +20,14 @@ class EnvironmentVariables {
 
     @IsNotEmpty()
     @IsString()
+    OPEN_ROUTE_SERVICE_API_KEY;
+
+    @IsNotEmpty()
+    @IsString()
+    OPEN_ROUTE_SERVICE_BASE_URL;
+
+    @IsNotEmpty()
+    @IsString()
     OPENAI_API_KEY: string;
 
     @IsNotEmpty()

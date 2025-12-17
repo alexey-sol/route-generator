@@ -3,7 +3,7 @@ import { type RouteGeneratorStateAnnotation } from "./util";
 export type Coordinates = [longitude: number, latitude: number];
 
 export type Isochrone = {
-    features: [IsochroneFeature, IsochroneFeature];
+    features: IsochroneFeature[];
 };
 
 export type IsochroneFeature = {
@@ -13,11 +13,9 @@ export type IsochroneFeature = {
     value: number;
 };
 
-export type NumberRange = [min: number, max: number];
-
 export type OverpassFeature = {
     geometry: {
-        coordinates: number[];
+        coordinates: Coordinates;
         type: string;
     };
     id: string;

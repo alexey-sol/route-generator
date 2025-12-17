@@ -1,20 +1,25 @@
-import { gigachatConfig, openAiConfig, processConfig } from "../config/config";
+import {
+    gigachatConfig,
+    openAiConfig,
+    openRouteServiceConfig,
+    processConfig,
+} from "../config/config";
 import { ProcessConfigService } from "../config/config.service";
 import { validate } from "../config/env.validation";
-import { ChatModelController } from "../route-generator/route-generator.controller";
-import { RouteGenerator } from "../route-generator/route-generator.service";
+import { RouteGeneratorModule } from "@/route-generator/route-generator.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
 @Module({
-    controllers: [ChatModelController],
+    controllers: [],
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [processConfig, gigachatConfig, openAiConfig],
+            load: [processConfig, gigachatConfig, openAiConfig, openRouteServiceConfig],
             validate,
         }),
+        RouteGeneratorModule,
     ],
-    providers: [RouteGenerator, ProcessConfigService],
+    providers: [ProcessConfigService],
 })
 export class AppModule {}

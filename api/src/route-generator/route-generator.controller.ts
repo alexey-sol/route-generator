@@ -1,6 +1,6 @@
-import { RouteGenerator } from "./route-generator.service";
+import { RouteGeneratorService } from "./route-generator.service";
 import { type Coordinates } from "./type";
-import { Body, Controller, Optional, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, Optional, Post } from "@nestjs/common";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsNumber } from "class-validator";
 
 // TODO open api dto
@@ -14,21 +14,20 @@ export class GetRouteRequest {
     @IsArray()
     startCoordinates: Coordinates;
 
-    @ArrayMaxSize(2)
-    @ArrayMinSize(2)
-    @IsArray()
-    travelTimeRangeInSec: Coordinates;
+    @IsNumber()
+    travelTimeInSec: number;
 }
 
 @Controller("route-generator")
-export class ChatModelController {
-    constructor(private readonly service: RouteGenerator) {}
+export class RouteGeneratorController {
+    constructor(private readonly service: RouteGeneratorService) {}
 
+    @HttpCode(200)
     @Post()
     async getRoutes(@Body() request: GetRouteRequest) {
         const response = await this.service.generateRoutes(
             request.startCoordinates,
-            request.travelTimeRangeInSec,
+            request.travelTimeInSec,
             request.routeCount,
         );
 

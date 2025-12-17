@@ -15,6 +15,19 @@ export const gigachatConfig = registerAs(
     }),
 );
 
+type OpenRouteServiceConfig = {
+    apiKey: string;
+    baseUrl: string;
+};
+
+export const openRouteServiceConfig = registerAs(
+    "openRouteService",
+    (): OpenRouteServiceConfig => ({
+        apiKey: environment.OPEN_ROUTE_SERVICE_API_KEY,
+        baseUrl: environment.OPEN_ROUTE_SERVICE_BASE_URL,
+    }),
+);
+
 type OpenAiConfig = BaseChatConfig & {
     baseUrl: string;
 };

@@ -1,10 +1,8 @@
 import { DEFAULT_GEOMETRY_TYPE, MIN_ROUTE_COUNT, MODEL_TEMPERATURE } from "./const";
-import GET_ISOCHRONE_STUB from "./stub/get-isochrone.json";
 import GET_POINTS_OF_INTEREST_WITHIN_ISOCHRONE_STUB from "./stub/get-points-of-interest-within-isochrone.json";
 import {
     Coordinates,
     Isochrone,
-    NumberRange,
     OverpassFeature,
     OverpassResponse,
     RouteGeneratorState,
@@ -15,14 +13,20 @@ import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 import { CallbackHandler } from "@langfuse/langchain";
-import { Injectable } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { AxiosError } from "axios";
 import { ReactAgent } from "langchain";
+import { catchError, firstValueFrom } from "rxjs";
 import { ProcessConfigService } from "src/config/config.service";
 import { AppConfig } from "src/config/config.type";
 
+const ISOCHRONE_FEATURES_INDEX = 0;
+const ISOCHRONE_COORDINATES_INDEX = 0;
+
 @Injectable()
-export class RouteGenerator {
+export class RouteGeneratorService {
     private readonly agent: ReactAgent;
 
     private findRandomEndPoint = (state: RouteGeneratorState) => {
@@ -30,10 +34,18 @@ export class RouteGenerator {
         return { endPoint: state.pointsOfInterest.at(-1) };
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private getIsochrone = (state: RouteGeneratorState) => {
-        // TODO implement; pass startPoint and travelTimeRangeInSec
-        return { isochrone: GET_ISOCHRONE_STUB as unknown as Isochrone };
+    private getIsochroneCoordinates = async ({
+        startPoint,
+        travelTimeInSec,
+    }: RouteGeneratorState) => {
+        const isochrone = await this.fetchFootWalkingIsochrone(
+            startPoint.geometry.coordinates,
+            travelTimeInSec,
+        );
+
+        return {
+            isochroneCoordinates: this.extractIsochroneCoordinates(isochrone),
+        };
     };
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -41,7 +53,7 @@ export class RouteGenerator {
         // TODO implement; pass isochrone
         return {
             pointsOfInterest:
-                GET_POINTS_OF_INTEREST_WITHIN_ISOCHRONE_STUB.features as OverpassResponse["features"],
+                GET_POINTS_OF_INTEREST_WITHIN_ISOCHRONE_STUB.features as unknown as OverpassResponse["features"],
         };
     };
 
@@ -67,13 +79,13 @@ export class RouteGenerator {
     };
 
     private readonly chain = new StateGraph(RouteGeneratorStateAnnotation)
-        .addNode("getIsochrone", this.getIsochrone)
+        .addNode("getIsochroneCoordinates", this.getIsochroneCoordinates)
         .addNode("getPointsOfInterestWithinIsochrone", this.getPointsOfInterestWithinIsochrone)
         .addNode("findRandomEndPoint", this.findRandomEndPoint)
         .addNode("getRoutes", this.getRoutes)
         .addNode("getRouteWaypoints", this.getRouteWaypoints)
-        .addEdge(START, "getIsochrone")
-        .addEdge("getIsochrone", "getPointsOfInterestWithinIsochrone")
+        .addEdge(START, "getIsochroneCoordinates")
+        .addEdge("getIsochroneCoordinates", "getPointsOfInterestWithinIsochrone")
         .addEdge("getPointsOfInterestWithinIsochrone", "findRandomEndPoint")
         .addEdge("findRandomEndPoint", "getRoutes")
         .addEdge("getRoutes", "getRouteWaypoints")
@@ -82,11 +94,14 @@ export class RouteGenerator {
 
     private readonly langfuseHandler: BaseCallbackHandler;
 
+    private readonly logger = new Logger(RouteGeneratorService.name);
+
     private readonly model: ChatOpenAI;
 
     constructor(
         private readonly configService: ConfigService<AppConfig, true>,
-        readonly processConfigService: ProcessConfigService,
+        private readonly processConfigService: ProcessConfigService,
+        private readonly httpService: HttpService,
     ) {
         const { apiKey, baseUrl, model } = configService.get("openAi", { infer: true });
 
@@ -106,7 +121,7 @@ export class RouteGenerator {
 
     async generateRoutes(
         startCoordinates: Coordinates,
-        travelTimeRangeInSec: NumberRange,
+        travelTimeInSec: number,
         routeCount = MIN_ROUTE_COUNT,
     ) {
         const startPoint: StartPoint = {
@@ -116,8 +131,34 @@ export class RouteGenerator {
             },
         };
 
-        const state = await this.chain.invoke({ routeCount, startPoint, travelTimeRangeInSec });
+        const state = await this.chain.invoke({ routeCount, startPoint, travelTimeInSec });
 
         return state.routeWaypoints;
+    }
+
+    private extractIsochroneCoordinates = (isochrone: Isochrone) =>
+        isochrone?.features?.[ISOCHRONE_FEATURES_INDEX]?.geometry?.coordinates?.[
+            ISOCHRONE_COORDINATES_INDEX
+        ] ?? [];
+
+    private async fetchFootWalkingIsochrone(
+        coordinates: Coordinates,
+        travelTimeInSec: number,
+    ): Promise<Isochrone> {
+        const { data } = await firstValueFrom(
+            this.httpService
+                .post<Isochrone>("/v2/isochrones/foot-walking", {
+                    locations: [coordinates],
+                    range: [travelTimeInSec, travelTimeInSec],
+                })
+                .pipe(
+                    catchError((error: AxiosError) => {
+                        this.logger.error(error.response?.data);
+                        throw error;
+                    }),
+                ),
+        );
+
+        return data;
     }
 }
