@@ -1,17 +1,10 @@
-import {
-    type Coordinates,
-    type Isochrone,
-    type OverpassFeature,
-    type OverpassResponse,
-    type Route,
-    type StartPoint,
-} from "./type";
+import { type Coordinates, type Isochrone, type Point, type Route } from "./type";
 import { Annotation } from "@langchain/langgraph";
 
 export const RouteGeneratorStateAnnotation = Annotation.Root({
-    endPoint: Annotation<OverpassFeature>,
-    isochroneCoordinates: Annotation<Isochrone>,
-    pointsOfInterest: Annotation<OverpassResponse["features"]>,
+    endPoint: Annotation<Point>,
+    isochrone: Annotation<Isochrone>,
+    pointsOfInterest: Annotation<Point[]>,
     routeCount: Annotation<number>,
     routes: Annotation<Route[]>,
     routeWaypoints: Annotation<
@@ -20,6 +13,6 @@ export const RouteGeneratorStateAnnotation = Annotation.Root({
             waypoints: Coordinates[];
         }>
     >,
-    startPoint: Annotation<StartPoint>,
+    startPoint: Annotation<Point>,
     travelTimeInSec: Annotation<number>,
 });

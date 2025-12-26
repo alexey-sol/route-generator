@@ -1,6 +1,8 @@
 import { Environment } from "./config.const";
 import { plainToInstance } from "class-transformer";
-import { IsEnum, IsNotEmpty, IsString, validateSync } from "class-validator";
+import { IsEnum, IsInt, IsNotEmpty, IsString, validateSync } from "class-validator";
+
+const DEFAULT_RETRY_COUNT = 5;
 
 class EnvironmentVariables {
     @IsNotEmpty()
@@ -20,11 +22,11 @@ class EnvironmentVariables {
 
     @IsNotEmpty()
     @IsString()
-    OPEN_ROUTE_SERVICE_API_KEY;
+    OPEN_ROUTE_SERVICE_API_KEY: string;
 
     @IsNotEmpty()
     @IsString()
-    OPEN_ROUTE_SERVICE_BASE_URL;
+    OPEN_ROUTE_SERVICE_BASE_URL: string;
 
     @IsNotEmpty()
     @IsString()
@@ -37,6 +39,13 @@ class EnvironmentVariables {
     @IsNotEmpty()
     @IsString()
     OPENAI_MODEL: string;
+
+    @IsNotEmpty()
+    @IsString()
+    OVERPASS_INSTANCE_ENDPOINT: string;
+
+    @IsInt()
+    OVERPASS_INSTANCE_RETRY_COUNT = DEFAULT_RETRY_COUNT;
 }
 
 export const validate = (config: Record<string, unknown>) => {

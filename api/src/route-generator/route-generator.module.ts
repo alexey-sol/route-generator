@@ -1,5 +1,7 @@
 import { RouteGeneratorController } from "./route-generator.controller";
 import { RouteGeneratorService } from "./route-generator.service";
+import { IsochroneService } from "./service/isochrone.service";
+import { PointsOfInterestService } from "./service/points-of-interest.service";
 import { ProcessConfigService } from "@/config/config.service";
 import { AppConfig } from "@/config/config.type";
 import { HttpModule } from "@nestjs/axios";
@@ -24,6 +26,11 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
             },
         }),
     ],
-    providers: [RouteGeneratorService, ProcessConfigService],
+    providers: [
+        RouteGeneratorService,
+        ProcessConfigService,
+        IsochroneService,
+        PointsOfInterestService,
+    ],
 })
 export class RouteGeneratorModule {}

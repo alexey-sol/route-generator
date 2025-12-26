@@ -41,6 +41,19 @@ export const openAiConfig = registerAs(
     }),
 );
 
+type OverpassInstanceConfig = {
+    endpoint: string;
+    retryCount: number; // TODO pass as maxAttempts
+};
+
+export const overpassInstanceConfig = registerAs(
+    "overpassInstance",
+    (): OverpassInstanceConfig => ({
+        endpoint: environment.OVERPASS_INSTANCE_ENDPOINT,
+        retryCount: environment.OVERPASS_INSTANCE_RETRY_COUNT,
+    }),
+);
+
 type ProcessConfig = {
     appName: string;
     environment: Environment;

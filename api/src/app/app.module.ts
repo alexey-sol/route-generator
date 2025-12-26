@@ -2,6 +2,7 @@ import {
     gigachatConfig,
     openAiConfig,
     openRouteServiceConfig,
+    overpassInstanceConfig,
     processConfig,
 } from "../config/config";
 import { ProcessConfigService } from "../config/config.service";
@@ -15,7 +16,13 @@ import { ConfigModule } from "@nestjs/config";
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [processConfig, gigachatConfig, openAiConfig, openRouteServiceConfig],
+            load: [
+                gigachatConfig,
+                openAiConfig,
+                openRouteServiceConfig,
+                overpassInstanceConfig,
+                processConfig,
+            ],
             validate,
         }),
         RouteGeneratorModule,
