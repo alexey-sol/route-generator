@@ -1,8 +1,9 @@
-import { DEFAULT_POINT_TYPE, MIN_ROUTE_COUNT, MODEL_TEMPERATURE } from "./const";
+import { MIN_ROUTE_COUNT, MODEL_TEMPERATURE } from "./const";
 import { IsochroneService } from "./service/isochrone.service";
 import { PointsOfInterestService } from "./service/points-of-interest.service";
-import { Coordinates, Point, RouteGeneratorState } from "./type";
-import { RouteGeneratorStateAnnotation } from "./util";
+import { RouteBoundingBoxService } from "./service/route-bounding-box.service";
+import { Coordinates, RouteGeneratorState } from "./type";
+import { NodePoint, NoRouteEndPointFoundError, RouteGeneratorStateAnnotation } from "./util";
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
@@ -13,13 +14,25 @@ import { AxiosError } from "axios";
 import { ReactAgent } from "langchain";
 import { AppConfig } from "src/config/config.type";
 
+const INITIAL_RETRY_INTERVAL_MS = 1_000;
+
 @Injectable()
 export class RouteGeneratorService {
     private readonly agent: ReactAgent;
 
-    private findRandomEndPoint = (state: RouteGeneratorState) => {
-        // TODO implement; pass isochrone and startPoint
-        return { endPoint: state.pointsOfInterest.at(-1) };
+    private findRouteBoundingBox = (state: RouteGeneratorState) => {
+        const endPoint = this.routeBoundingBoxService.findRouteEndPoint(state);
+
+        if (!endPoint) {
+            throw new NoRouteEndPointFoundError();
+        }
+
+        const boundingBox = this.routeBoundingBoxService.getBoundingBox({
+            endPoint,
+            startPoint: state.startPoint,
+        });
+
+        return { boundingBox, endPoint };
     };
 
     private getIsochrone = async (state: RouteGeneratorState) => ({
@@ -55,24 +68,24 @@ export class RouteGeneratorService {
         .addNode("getIsochrone", this.getIsochrone)
         .addNode("getPointsOfInterest", this.getPointsOfInterest, {
             retryPolicy: {
-                initialInterval: 2,
+                initialInterval: INITIAL_RETRY_INTERVAL_MS,
                 maxAttempts: 5,
                 retryOn: (error: AxiosError) => {
                     return (
                         error instanceof AxiosError &&
-                        Boolean(error.status) &&
+                        !!error.status &&
                         error.status >= HttpStatus.INTERNAL_SERVER_ERROR
                     );
                 },
             },
         })
-        .addNode("findRandomEndPoint", this.findRandomEndPoint)
+        .addNode("findRouteBoundingBox", this.findRouteBoundingBox)
         .addNode("getRoutes", this.getRoutes)
         .addNode("getRouteWaypoints", this.getRouteWaypoints)
         .addEdge(START, "getIsochrone")
         .addEdge("getIsochrone", "getPointsOfInterest")
-        .addEdge("getPointsOfInterest", "findRandomEndPoint")
-        .addEdge("findRandomEndPoint", "getRoutes")
+        .addEdge("getPointsOfInterest", "findRouteBoundingBox")
+        .addEdge("findRouteBoundingBox", "getRoutes")
         .addEdge("getRoutes", "getRouteWaypoints")
         // TODO обогатить route points описанием от ЛЛМ
         .addEdge("getRouteWaypoints", END)
@@ -87,6 +100,7 @@ export class RouteGeneratorService {
     constructor(
         private readonly isochroneService: IsochroneService,
         private readonly pointsOfInterestService: PointsOfInterestService,
+        private readonly routeBoundingBoxService: RouteBoundingBoxService,
         configService: ConfigService<AppConfig, true>,
     ) {
         const { apiKey, baseUrl, model } = configService.get("openAi", { infer: true });
@@ -110,10 +124,7 @@ export class RouteGeneratorService {
         travelTimeInSec: number,
         routeCount = MIN_ROUTE_COUNT,
     ) {
-        const startPoint: Point = {
-            coordinates: startCoordinates,
-            type: DEFAULT_POINT_TYPE,
-        };
+        const startPoint = new NodePoint(startCoordinates);
 
         const state = await this.chain.invoke({ routeCount, startPoint, travelTimeInSec });
 

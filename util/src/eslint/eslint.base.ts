@@ -24,6 +24,7 @@ export const baseEslintConfig = defineConfig({
         ],
         "import/no-unassigned-import": "off",
         "no-console": ["error", { allow: ["error"] }],
+        "no-implicit-coercion": ["error", { allow: ["!!"] }],
         "unicorn/filename-case": ["error", { case: "kebabCase" }],
         "unicorn/prevent-abbreviations": "off",
     },

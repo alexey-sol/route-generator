@@ -1,10 +1,12 @@
 import {
+    OverpassInstanceElement,
     OverpassInstanceRequest,
     OverpassInstanceResponse,
     Point,
     RouteGeneratorState,
 } from "../type";
 import { AppConfig } from "@/config/config.type";
+import { isPoint } from "@/util/guards";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -52,6 +54,14 @@ export class PointsOfInterestService {
         return data;
     }
 
+    private mapPoint = (element: OverpassInstanceElement): Point => ({
+        coordinates: [element.lon, element.lat],
+        info: {
+            name: element.tags.name,
+        },
+        type: element.type,
+    });
+
     private mapRequest = ({
         isochrone,
     }: Pick<RouteGeneratorState, "isochrone">): OverpassInstanceRequest => {
@@ -80,11 +90,5 @@ export class PointsOfInterestService {
     };
 
     private mapResponse = (response: OverpassInstanceResponse): Point[] =>
-        response.elements?.map((element) => ({
-            coordinates: [element.long, element.lat],
-            info: {
-                name: element.tags.name,
-            },
-            type: element.type,
-        }));
+        response.elements?.map(this.mapPoint).filter(isPoint) ?? [];
 }

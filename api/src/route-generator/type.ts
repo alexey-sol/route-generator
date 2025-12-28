@@ -1,4 +1,12 @@
+import { type PointType } from "./const";
 import { type RouteGeneratorStateAnnotation } from "./util";
+
+export type BoundingBox = [
+    minLongitude: number,
+    minLatitude: number,
+    maxLongitude: number,
+    maxLatitude: number,
+];
 
 export type Coordinates = [longitude: number, latitude: number];
 
@@ -20,14 +28,14 @@ export type ORSIsochroneResponse = {
 export type OverpassInstanceElement = {
     id: number;
     lat: number;
-    long: number;
+    lon: number;
     tags: {
         "addr:housenumber"?: string;
         "addr:street"?: string;
         amenity: string;
         name?: string;
     };
-    type: OverpassType;
+    type: PointType;
 };
 
 export type OverpassInstanceRequest = {
@@ -38,22 +46,18 @@ export type OverpassInstanceResponse = {
     elements: OverpassInstanceElement[];
 };
 
-export type OverpassType = "node" | "relation" | "way";
-
 export type Point = {
     coordinates: Coordinates;
     info?: {
         description?: string;
         name?: string;
     };
-    type: OverpassType;
+    type: PointType;
 };
 
 export type Route = Point[];
 
 export type RouteGeneratorState = typeof RouteGeneratorStateAnnotation.State;
-
-type BoundingBox = [number, number, number, number];
 
 type ORSFeature = {
     geometry: {
