@@ -3,7 +3,7 @@ import {
     OverpassInstanceRequest,
     OverpassInstanceResponse,
     Point,
-    RouteGeneratorState,
+    WalkingRouteState,
 } from "../type";
 import { AppConfig } from "@/config/config.type";
 import { isPoint } from "@/util/guards";
@@ -25,9 +25,7 @@ export class PointsOfInterestService {
         private readonly httpService: HttpService,
     ) {}
 
-    getPointsOfInterest = async (
-        state: Pick<RouteGeneratorState, "isochrone">,
-    ): Promise<Point[]> => {
+    getPointsOfInterest = async (state: Pick<WalkingRouteState, "isochrone">): Promise<Point[]> => {
         const response = await this.fetchPointsOfInterest(this.mapRequest(state));
 
         return this.mapResponse(response);
@@ -56,6 +54,7 @@ export class PointsOfInterestService {
 
     private mapPoint = (element: OverpassInstanceElement): Point => ({
         coordinates: [element.lon, element.lat],
+        id: element.id,
         info: {
             name: element.tags.name,
         },
@@ -64,7 +63,7 @@ export class PointsOfInterestService {
 
     private mapRequest = ({
         isochrone,
-    }: Pick<RouteGeneratorState, "isochrone">): OverpassInstanceRequest => {
+    }: Pick<WalkingRouteState, "isochrone">): OverpassInstanceRequest => {
         const { boundingBox, coordinates } = isochrone;
 
         const overpassCoordinates = coordinates.map(([longitude, latitude]) => [

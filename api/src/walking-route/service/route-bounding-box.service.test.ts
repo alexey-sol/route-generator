@@ -1,10 +1,10 @@
-import { type RouteGeneratorState } from "../type";
+import { type WalkingRouteState } from "../type";
 import { NodePoint, RelationPoint } from "../util";
 import { RouteBoundingBoxService } from "./route-bounding-box.service";
 
 const START_POINT = new NodePoint([1, 2]);
 
-type StateSlice = Pick<RouteGeneratorState, "pointsOfInterest" | "startPoint">;
+type StateSlice = Pick<WalkingRouteState, "pointsOfInterest" | "startPoint">;
 
 describe("RouteBoundingBoxService", () => {
     let service: RouteBoundingBoxService;

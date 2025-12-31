@@ -7,7 +7,7 @@ import {
 } from "../config/config";
 import { ProcessConfigService } from "../config/config.service";
 import { validate } from "../config/env.validation";
-import { RouteGeneratorModule } from "@/route-generator/route-generator.module";
+import { WalkingRouteModule } from "@/walking-route/walking-route.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
@@ -25,7 +25,7 @@ import { ConfigModule } from "@nestjs/config";
             ],
             validate,
         }),
-        RouteGeneratorModule,
+        WalkingRouteModule,
     ],
     providers: [ProcessConfigService],
 })

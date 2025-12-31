@@ -1,9 +1,9 @@
-import { PointType } from "@/route-generator/const";
-import { type Coordinates, type Point } from "@/route-generator/type";
+import { PointType } from "@/walking-route/const";
+import { type Coordinates, type Point } from "@/walking-route/type";
 
 const isNumber = (item: unknown): item is number => typeof item === "number";
 
-const isCoordinates = (item: unknown): item is Coordinates =>
+export const isCoordinates = (item: unknown): item is Coordinates =>
     item instanceof Array && item.length === 2 && item.every(isNumber);
 
 const hasPointCoordinates = (item: object): item is { coordinates: Point["coordinates"] } =>

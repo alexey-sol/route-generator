@@ -1,4 +1,4 @@
-import { Isochrone, ORSIsochroneRequest, ORSIsochroneResponse, RouteGeneratorState } from "../type";
+import { Isochrone, ORSIsochroneRequest, ORSIsochroneResponse, WalkingRouteState } from "../type";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { AxiosError } from "axios";
@@ -14,7 +14,7 @@ export class IsochroneService {
     constructor(private readonly httpService: HttpService) {}
 
     getIsochrone = async (
-        state: Pick<RouteGeneratorState, "startPoint" | "travelTimeInSec">,
+        state: Pick<WalkingRouteState, "startPoint" | "travelTimeInSec">,
     ): Promise<Isochrone> => {
         const response = await this.fetchFootWalkingIsochrone(this.mapRequest(state));
 
@@ -41,7 +41,7 @@ export class IsochroneService {
     private mapRequest = ({
         startPoint,
         travelTimeInSec,
-    }: Pick<RouteGeneratorState, "startPoint" | "travelTimeInSec">): ORSIsochroneRequest => ({
+    }: Pick<WalkingRouteState, "startPoint" | "travelTimeInSec">): ORSIsochroneRequest => ({
         locations: [startPoint.coordinates],
         range: [travelTimeInSec, travelTimeInSec],
     });

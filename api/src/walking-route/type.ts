@@ -1,5 +1,5 @@
 import { type PointType } from "./const";
-import { type RouteGeneratorStateAnnotation } from "./util";
+import { type WalkingRouteStateAnnotation } from "./util";
 
 export type BoundingBox = [
     minLongitude: number,
@@ -48,6 +48,7 @@ export type OverpassInstanceResponse = {
 
 export type Point = {
     coordinates: Coordinates;
+    id: number;
     info?: {
         description?: string;
         name?: string;
@@ -57,7 +58,7 @@ export type Point = {
 
 export type Route = Point[];
 
-export type RouteGeneratorState = typeof RouteGeneratorStateAnnotation.State;
+export type WalkingRouteState = typeof WalkingRouteStateAnnotation.State;
 
 type ORSFeature = {
     geometry: {

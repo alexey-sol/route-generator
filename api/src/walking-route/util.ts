@@ -1,12 +1,11 @@
 import { PointType } from "./const";
-import { type BoundingBox, type Coordinates, type Isochrone, type Point, type Route } from "./type";
+import { type Coordinates, type Isochrone, type Point, type Route } from "./type";
 import { Annotation } from "@langchain/langgraph";
 
-export const RouteGeneratorStateAnnotation = Annotation.Root({
+export const WalkingRouteStateAnnotation = Annotation.Root({
     endPoint: Annotation<Point>,
     isochrone: Annotation<Isochrone>,
     pointsOfInterest: Annotation<Point[]>,
-    routeBoundingBox: Annotation<BoundingBox>,
     routeCount: Annotation<number>,
     routes: Annotation<Route[]>,
     routeWaypoints: Annotation<
@@ -19,11 +18,14 @@ export const RouteGeneratorStateAnnotation = Annotation.Root({
     travelTimeInSec: Annotation<number>,
 });
 
+const DEFAULT_POINT_ID = 0;
+
 export class NodePoint implements Point {
     readonly type = PointType.Node;
 
     constructor(
         readonly coordinates: Point["coordinates"],
+        readonly id: Point["id"] = DEFAULT_POINT_ID,
         readonly info?: Point["info"],
     ) {}
 }
@@ -37,11 +39,19 @@ export class NoRouteEndPointFoundError extends Error {
     }
 }
 
+// TODO think about how to handle this case properly
+export class NotUniqueRouteError extends Error {
+    constructor(message = "Failed to generate unique route") {
+        super(message);
+    }
+}
+
 export class RelationPoint implements Point {
     readonly type = PointType.Relation;
 
     constructor(
         readonly coordinates: Point["coordinates"],
+        readonly id: Point["id"] = DEFAULT_POINT_ID,
         readonly info?: Point["info"],
     ) {}
 }

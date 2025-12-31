@@ -1,5 +1,5 @@
-import { RouteGeneratorService } from "./route-generator.service";
 import { type Coordinates } from "./type";
+import { WalkingRouteService } from "./walking-route.service";
 import { Body, Controller, HttpCode, Optional, Post } from "@nestjs/common";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsNumber } from "class-validator";
 
@@ -18,9 +18,9 @@ export class GetRouteRequest {
     travelTimeInSec: number;
 }
 
-@Controller("route-generator")
-export class RouteGeneratorController {
-    constructor(private readonly service: RouteGeneratorService) {}
+@Controller("walking-route")
+export class WalkingRouteController {
+    constructor(private readonly service: WalkingRouteService) {}
 
     @HttpCode(200)
     @Post()

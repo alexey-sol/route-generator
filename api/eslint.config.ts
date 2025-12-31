@@ -26,4 +26,13 @@ export default defineConfig([
     },
     ...baseJsonConfig,
     ...basePrettierConfig,
+    // Stub JSONs are already pretty bloated, so we disable some rules to keep their size reasonable.
+    {
+        files: ["**/stub/*.json"],
+        rules: {
+            "jsonc/array-bracket-newline": "off",
+            "jsonc/array-bracket-spacing": "off",
+            "jsonc/array-element-newline": "off",
+        },
+    },
 ]);
