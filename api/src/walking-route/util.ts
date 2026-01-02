@@ -1,11 +1,18 @@
-import { PointType } from "./const";
-import { type Coordinates, type Isochrone, type Point, type Route } from "./type";
+import {
+    type AnyPlace,
+    type Coordinates,
+    type Isochrone,
+    type MultiPolygonPlace,
+    type PointPlace,
+    type PolygonPlace,
+    type Route,
+} from "./type";
 import { Annotation } from "@langchain/langgraph";
 
 export const WalkingRouteStateAnnotation = Annotation.Root({
-    endPoint: Annotation<Point>,
+    endPlace: Annotation<AnyPlace>,
     isochrone: Annotation<Isochrone>,
-    pointsOfInterest: Annotation<Point[]>,
+    placesOfInterest: Annotation<AnyPlace[]>,
     routeCount: Annotation<number>,
     routes: Annotation<Route[]>,
     routeWaypoints: Annotation<
@@ -14,26 +21,56 @@ export const WalkingRouteStateAnnotation = Annotation.Root({
             waypoints: Coordinates[];
         }>
     >,
-    startPoint: Annotation<Point>,
+    startPlace: Annotation<PointPlace>,
     travelTimeInSec: Annotation<number>,
 });
 
-const DEFAULT_POINT_ID = 0;
+export const getPointPlace = (
+    coordinates: PointPlace["geometry"]["coordinates"],
+    properties: PointPlace["properties"] = null,
+): PointPlace => ({
+    geometry: {
+        coordinates,
+        type: "Point",
+    },
+    properties,
+    type: "Feature",
+});
 
-export class NodePoint implements Point {
-    readonly type = PointType.Node;
+export const getPolygonPlace = (
+    coordinates: PolygonPlace["geometry"]["coordinates"],
+    properties: PolygonPlace["properties"] = null,
+): PolygonPlace => ({
+    geometry: {
+        coordinates,
+        type: "Polygon",
+    },
+    properties,
+    type: "Feature",
+});
 
-    constructor(
-        readonly coordinates: Point["coordinates"],
-        readonly id: Point["id"] = DEFAULT_POINT_ID,
-        readonly info?: Point["info"],
-    ) {}
+export const getMultiPolygonPlace = (
+    coordinates: MultiPolygonPlace["geometry"]["coordinates"],
+    properties: MultiPolygonPlace["properties"] = null,
+): MultiPolygonPlace => ({
+    geometry: {
+        coordinates,
+        type: "MultiPolygon",
+    },
+    properties,
+    type: "Feature",
+});
+
+export class NoBoundingBoxProvidedError extends Error {
+    constructor(message = "No bounding box provided") {
+        super(message);
+    }
 }
 
 /**
  * The error indicates that the user is in the middle of nowhere or their walk is too short.
  */
-export class NoRouteEndPointFoundError extends Error {
+export class NoRouteEndPlaceFoundError extends Error {
     constructor(message = "No route end point found") {
         super(message);
     }
@@ -44,14 +81,4 @@ export class NotUniqueRouteError extends Error {
     constructor(message = "Failed to generate unique route") {
         super(message);
     }
-}
-
-export class RelationPoint implements Point {
-    readonly type = PointType.Relation;
-
-    constructor(
-        readonly coordinates: Point["coordinates"],
-        readonly id: Point["id"] = DEFAULT_POINT_ID,
-        readonly info?: Point["info"],
-    ) {}
 }

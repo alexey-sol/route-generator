@@ -1,56 +1,52 @@
-import { Point, Route, WalkingRouteState } from "../type";
+import { AnyPlace, Route, WalkingRouteState } from "../type";
 import { NotUniqueRouteError } from "../util";
 import { pickEvenlyWithJitter } from "@/util/helpers";
 import { Injectable } from "@nestjs/common";
 
-const FIRST_POINT_INDEX = 0;
+const FIRST_PLACE_INDEX = 0;
 const PICK_POINT_JITTER = 2;
 const MAX_ATTEMPTS_TO_GENERATE_ROUTE = 50;
 
 @Injectable()
 export class RouteGeneratorService {
     /**
-     * Returns an array of unique routes with the length = routeCount.
+     * Returns an array of unique routes with the length of routeCount.
      */
     generateRoutes = (
         state: Pick<
             WalkingRouteState,
-            "endPoint" | "pointsOfInterest" | "routeCount" | "startPoint" | "travelTimeInSec"
+            "endPlace" | "placesOfInterest" | "routeCount" | "startPlace" | "travelTimeInSec"
         >,
     ): Route[] => {
-        const routes: Route[] = [];
+        const rawRoutes: Route[] = [];
 
         for (let count = 0; count < state.routeCount; count++) {
-            const route = this.generateUniqueRoute({
-                ...state,
-                routes,
-            });
-            routes.push(route);
+            const rawRoute = this.generateUniqueRoute(rawRoutes, state);
+            rawRoutes.push(rawRoute);
         }
 
-        return this.mapRoutes({ ...state, routes });
+        return this.mapRoutes(rawRoutes, state);
     };
 
     /**
-     * Generates a unique route. Doesn't include startPoint and endPoints: those should be added later.
+     * Generates a unique route. Doesn't include startPlace and endPlace: those will be added later.
      */
-    private generateUniqueRoute = ({
-        endPoint,
-        pointsOfInterest,
-        routes,
-        travelTimeInSec,
-    }: Pick<
-        WalkingRouteState,
-        "endPoint" | "pointsOfInterest" | "routes" | "travelTimeInSec"
-    >): Point[] => {
-        const pointsToPick = this.getPointsToPick(travelTimeInSec);
+    private generateUniqueRoute = (
+        rawRoutes: Route[],
+        {
+            endPlace,
+            placesOfInterest,
+            travelTimeInSec,
+        }: Pick<WalkingRouteState, "endPlace" | "placesOfInterest" | "travelTimeInSec">,
+    ): AnyPlace[] => {
+        const placesToPick = this.getPlacesToPick(travelTimeInSec);
 
         let attempts = 0;
 
         while (attempts < MAX_ATTEMPTS_TO_GENERATE_ROUTE) {
-            const route = pickEvenlyWithJitter(pointsOfInterest, pointsToPick, PICK_POINT_JITTER);
+            const route = pickEvenlyWithJitter(placesOfInterest, placesToPick, PICK_POINT_JITTER);
 
-            if (!this.hasDuplicates(route, endPoint) && this.isUniqueRoute(route, routes)) {
+            if (!this.hasDuplicates(route, endPlace) && this.isUniqueRoute(route, rawRoutes)) {
                 return route;
             }
 
@@ -60,36 +56,37 @@ export class RouteGeneratorService {
         throw new NotUniqueRouteError();
     };
 
-    private getPointsToPick = (travelTimeInSec: WalkingRouteState["travelTimeInSec"]) =>
+    private getPlacesToPick = (travelTimeInSec: WalkingRouteState["travelTimeInSec"]) =>
         Math.ceil(travelTimeInSec / (travelTimeInSec / 5));
 
-    private hasDuplicates = (route: Route, endPoint: WalkingRouteState["endPoint"]) => {
-        const hasDuplicatePoints = new Set(route.map(({ id }) => id)).size !== route.length;
-        const hasDuplicateEndPoint = route.at(-1)?.id === endPoint.id;
+    private hasDuplicates = (route: Route, endPlace: WalkingRouteState["endPlace"]) => {
+        const hasDuplicatePlaces = new Set(route.map(({ id }) => id)).size !== route.length;
+        const hasDuplicateEndPlace = route.at(-1)?.id === endPlace.id;
 
-        return hasDuplicatePoints || hasDuplicateEndPoint;
+        return hasDuplicatePlaces || hasDuplicateEndPlace;
     };
 
     /**
-     * Checks only the first point of the route, which is enough.
+     * Checks only the first place of the route, it's enough.
      */
-    private isUniqueRoute = (route: Route, routes: WalkingRouteState["routes"]) => {
-        if (routes.length === 0) {
+    private isUniqueRoute = (rawRoute: Route, existingRawRoutes: Route[]) => {
+        if (existingRawRoutes.length === 0) {
             return true;
         }
 
-        return routes.some(
-            (existingRoute) => existingRoute[FIRST_POINT_INDEX].id !== route[FIRST_POINT_INDEX].id,
+        return existingRawRoutes.some(
+            (existingRoute) =>
+                existingRoute[FIRST_PLACE_INDEX].id !== rawRoute[FIRST_PLACE_INDEX].id,
         );
     };
 
     /**
-     * Completes each route by adding startPoint and endPoint.
+     * Completes each route by adding startPlace and endPlace.
      */
-    private mapRoutes = ({
-        endPoint,
-        routes,
-        startPoint,
-    }: Pick<WalkingRouteState, "endPoint" | "routes" | "startPoint">) =>
-        routes.map((route) => [startPoint, ...route, endPoint]);
+    private mapRoutes = (
+        rawRoutes: Route[],
+        { endPlace, startPlace }: Pick<WalkingRouteState, "endPlace" | "startPlace">,
+    ) => {
+        return rawRoutes.map((route) => [startPlace, ...route, endPlace]);
+    };
 }

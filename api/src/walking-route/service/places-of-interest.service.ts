@@ -1,37 +1,40 @@
 import {
-    OverpassInstanceElement,
-    OverpassInstanceRequest,
-    OverpassInstanceResponse,
-    Point,
-    WalkingRouteState,
+    type OverpassInstanceRequest,
+    type OverpassInstanceResponse,
+    type WalkingRouteState,
 } from "../type";
+import { NoBoundingBoxProvidedError } from "../util";
 import { AppConfig } from "@/config/config.type";
-import { isPoint } from "@/util/guards";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AxiosError } from "axios";
+import osmtogeojson from "osmtogeojson";
 import { catchError, firstValueFrom } from "rxjs";
 
 const OVERPASS_AMENITIES = ["police", "fire_station", "school"]; // TODO adjust
 const OVERPASS_TIMEOUT_SEC = 60;
+const ISOCHRONE_FEATURES_INDEX = 0;
+const ISOCHRONE_COORDINATES_INDEX = 0;
 
 @Injectable()
-export class PointsOfInterestService {
-    private readonly logger = new Logger(PointsOfInterestService.name);
+export class PlacesOfInterestService {
+    private readonly logger = new Logger(PlacesOfInterestService.name);
 
     constructor(
         private readonly configService: ConfigService<AppConfig, true>,
         private readonly httpService: HttpService,
     ) {}
 
-    getPointsOfInterest = async (state: Pick<WalkingRouteState, "isochrone">): Promise<Point[]> => {
-        const response = await this.fetchPointsOfInterest(this.mapRequest(state));
+    getPlacesOfInterest = async (
+        state: Pick<WalkingRouteState, "isochrone">,
+    ): Promise<WalkingRouteState["placesOfInterest"]> => {
+        const response = await this.fetchPlacesOfInterest(this.mapRequest(state));
 
         return this.mapResponse(response);
     };
 
-    private async fetchPointsOfInterest(
+    private async fetchPlacesOfInterest(
         request: OverpassInstanceRequest,
     ): Promise<OverpassInstanceResponse> {
         const { endpoint } = this.configService.get("overpassInstance", { infer: true });
@@ -52,26 +55,30 @@ export class PointsOfInterestService {
         return data;
     }
 
-    private mapPoint = (element: OverpassInstanceElement): Point => ({
-        coordinates: [element.lon, element.lat],
-        id: element.id,
-        info: {
-            name: element.tags.name,
-        },
-        type: element.type,
+    private mapIsochrone = (isochrone: WalkingRouteState["isochrone"]) => ({
+        boundingBox: isochrone.bbox,
+        coordinates:
+            isochrone?.features?.[ISOCHRONE_FEATURES_INDEX]?.geometry?.coordinates?.[
+                ISOCHRONE_COORDINATES_INDEX
+            ] ?? [],
     });
 
     private mapRequest = ({
         isochrone,
     }: Pick<WalkingRouteState, "isochrone">): OverpassInstanceRequest => {
-        const { boundingBox, coordinates } = isochrone;
+        const { boundingBox, coordinates } = this.mapIsochrone(isochrone);
 
         const overpassCoordinates = coordinates.map(([longitude, latitude]) => [
             latitude,
             longitude,
         ]);
 
+        if (!boundingBox) {
+            throw new NoBoundingBoxProvidedError();
+        }
+
         const [minLongitude, minLatitude, maxLongitude, maxLatitude] = boundingBox;
+
         const overpassBoundingBox = [minLatitude, minLongitude, maxLatitude, maxLongitude];
         const overpassBoundingBoxAsString = overpassBoundingBox.join(",");
 
@@ -88,6 +95,9 @@ export class PointsOfInterestService {
         };
     };
 
-    private mapResponse = (response: OverpassInstanceResponse): Point[] =>
-        response.elements?.map(this.mapPoint).filter(isPoint) ?? [];
+    private mapResponse = (
+        response: OverpassInstanceResponse,
+    ): WalkingRouteState["placesOfInterest"] => {
+        return osmtogeojson(response)?.features ?? [];
+    };
 }

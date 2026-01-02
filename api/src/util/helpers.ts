@@ -1,3 +1,7 @@
+import { isMultiPolygonFeature, isPointFeature, isPolygonFeature } from "./guards";
+import { type AnyPlace, type PointPlace } from "@/walking-route/type";
+import { distance, pointToPolygonDistance, type Units } from "@turf/turf";
+
 /**
  * Picks a number of elements (elementsToPick) from the array evenly but with an offset (if jitterRange is
  * greater than default 1).
@@ -29,4 +33,18 @@ export const pickEvenlyWithJitter = <T>(
 
         return array[jitteredIndex];
     });
+};
+
+export const getDistance = (from: PointPlace, to: AnyPlace, units: Units): number => {
+    try {
+        if (isPointFeature(to)) {
+            return distance(from, to, { units });
+        } else if (isPolygonFeature(to) || isMultiPolygonFeature(to)) {
+            return pointToPolygonDistance(from, to, { units });
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    return 0;
 };

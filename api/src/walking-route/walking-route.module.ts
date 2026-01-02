@@ -1,5 +1,5 @@
 import { IsochroneService } from "./service/isochrone.service";
-import { PointsOfInterestService } from "./service/points-of-interest.service";
+import { PlacesOfInterestService } from "./service/places-of-interest.service";
 import { RouteBoundingBoxService } from "./service/route-bounding-box.service";
 import { RouteGeneratorService } from "./service/route-generator.service";
 import { WalkingRouteController } from "./walking-route.controller";
@@ -29,10 +29,10 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
         }),
     ],
     providers: [
-        WalkingRouteService,
         ProcessConfigService,
+        WalkingRouteService,
         IsochroneService,
-        PointsOfInterestService,
+        PlacesOfInterestService,
         RouteBoundingBoxService,
         RouteGeneratorService,
     ],

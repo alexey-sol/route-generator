@@ -1,102 +1,62 @@
-import { BoundingBox, Coordinates, Point, WalkingRouteState } from "../type";
-import { isCoordinates } from "@/util/guards";
+import { type AnyPlace, type PointPlace, type WalkingRouteState } from "../type";
+import { getDistance } from "@/util/helpers";
 import { Injectable } from "@nestjs/common";
-import {
-    bbox,
-    bboxPolygon,
-    distance,
-    featureCollection,
-    lineString,
-    point,
-    pointsWithinPolygon,
-    Units,
-} from "@turf/turf";
+import { bbox, bboxPolygon, booleanIntersects, featureCollection, Units } from "@turf/turf";
 
+const DEFAULT_DISTANCE = 0;
 const DISTANCE_UNITS: Units = "meters";
 const ANGLE_UNITS: Units = "radians";
 
 @Injectable()
 export class RouteBoundingBoxService {
-    filterPointsOutsideBoundingBox = ({
-        endPoint,
-        pointsOfInterest,
-        startPoint,
-    }: Pick<WalkingRouteState, "endPoint" | "pointsOfInterest" | "startPoint">): Point[] => {
-        const boundingBox = this.getBoundingBox({ endPoint, startPoint });
-        // TODO it may not work when dealing with a way or a relation
-        const mapCoordinatesToPoint: Map<Point["coordinates"], Point> = new Map();
+    filterPlacesOutsideBoundingBox = ({
+        endPlace,
+        placesOfInterest,
+        startPlace,
+    }: Pick<
+        WalkingRouteState,
+        "endPlace" | "placesOfInterest" | "startPlace"
+    >): WalkingRouteState["placesOfInterest"] => {
+        const routeBoundingBox = bbox(featureCollection([startPlace, endPlace]));
 
-        for (const pt of pointsOfInterest) {
-            mapCoordinatesToPoint.set(pt.coordinates, pt);
-        }
+        const routablePlaces = placesOfInterest.filter((place) => {
+            return (
+                this.isValidDistance(startPlace, place) &&
+                booleanIntersects(place, bboxPolygon(routeBoundingBox))
+            );
+        });
 
-        const points = featureCollection(pointsOfInterest.map((pt) => point(pt.coordinates)));
-        const polygon = bboxPolygon(boundingBox);
-        const pointsInside = pointsWithinPolygon(points, polygon);
-
-        const sortedFeatures = pointsInside.features.toSorted(
-            this.sortFeaturesByDistanceTo(startPoint.coordinates),
-        );
-
-        return this.mapPointsOfInterest(mapCoordinatesToPoint, sortedFeatures);
+        return routablePlaces.toSorted(this.sortPlacesByDistanceTo(startPlace));
     };
 
-    findRouteEndPoint = ({
-        pointsOfInterest,
-        startPoint,
-    }: Pick<WalkingRouteState, "pointsOfInterest" | "startPoint">): null | Point => {
-        let maxDistance = 0;
-        let routeEndPoint: null | Point = null;
+    findEndPlace = ({
+        placesOfInterest,
+        startPlace,
+    }: Pick<WalkingRouteState, "placesOfInterest" | "startPlace">): AnyPlace | null => {
+        let maxDistance = DEFAULT_DISTANCE;
+        let endPlace: AnyPlace | null = null;
 
-        const from = point(startPoint.coordinates);
+        for (const place of placesOfInterest) {
+            const fromToDistance = getDistance(startPlace, place, DISTANCE_UNITS);
 
-        for (const item of pointsOfInterest) {
-            if (item.type === "node") {
-                const to = point(item.coordinates);
-
-                const fromToDistance = distance(from, to, { units: DISTANCE_UNITS });
-
-                if (fromToDistance > maxDistance) {
-                    maxDistance = fromToDistance;
-                    routeEndPoint = item;
-                }
+            if (fromToDistance > maxDistance) {
+                maxDistance = fromToDistance;
+                endPlace = place;
             }
         }
 
-        return routeEndPoint;
+        return endPlace;
     };
 
-    private getBoundingBox = ({
-        endPoint,
-        startPoint,
-    }: Pick<WalkingRouteState, "endPoint" | "startPoint">): BoundingBox => {
-        const points = lineString([startPoint.coordinates, endPoint.coordinates]);
-
-        return bbox(points) as BoundingBox;
+    /**
+     * In the case of an invalid geoJSON feature, the measured distance will be 0. It's better to filter such
+     * elements out.
+     */
+    private isValidDistance = (from: PointPlace, to: AnyPlace) => {
+        return getDistance(from, to, ANGLE_UNITS) !== DEFAULT_DISTANCE;
     };
 
-    private mapPointsOfInterest = (
-        mapCoordinatesToPoint: Map<Point["coordinates"], Point>,
-        features: ReturnType<typeof pointsWithinPolygon>["features"],
-    ): Point[] => {
-        const points: Point[] = [];
-
-        for (const feature of features) {
-            if (isCoordinates(feature.geometry.coordinates)) {
-                const pt = mapCoordinatesToPoint.get(feature.geometry.coordinates);
-
-                if (pt) {
-                    points.push(pt);
-                }
-            }
-        }
-
-        return points;
-    };
-
-    private sortFeaturesByDistanceTo = (target: Coordinates) => {
-        return (a, b) =>
-            distance(target, a, { units: ANGLE_UNITS }) -
-            distance(target, b, { units: ANGLE_UNITS });
+    private sortPlacesByDistanceTo = (target: PointPlace) => {
+        return (a, b) => getDistance(target, a, ANGLE_UNITS) - getDistance(target, b, ANGLE_UNITS);
     };
 }

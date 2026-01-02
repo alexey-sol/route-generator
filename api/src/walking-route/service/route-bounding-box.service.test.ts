@@ -1,10 +1,10 @@
 import { type WalkingRouteState } from "../type";
-import { NodePoint, RelationPoint } from "../util";
+import { getMultiPolygonPlace, getPointPlace, getPolygonPlace } from "../util";
 import { RouteBoundingBoxService } from "./route-bounding-box.service";
 
-const START_POINT = new NodePoint([1, 2]);
+const START_POINT = getPointPlace([1, 2]);
 
-type StateSlice = Pick<WalkingRouteState, "pointsOfInterest" | "startPoint">;
+type StateSlice = Pick<WalkingRouteState, "placesOfInterest" | "startPlace">;
 
 describe("RouteBoundingBoxService", () => {
     let service: RouteBoundingBoxService;
@@ -13,54 +13,53 @@ describe("RouteBoundingBoxService", () => {
         service = new RouteBoundingBoxService();
     });
 
-    describe("findRouteEndPoint", () => {
-        it("returns farthest point from startPoint", async () => {
-            const POINT_1 = new NodePoint([0.1, 5.3]);
-            const POINT_2 = new NodePoint([1.1, 5.4]);
-            const POINT_3 = new NodePoint([4.2, 0.2]);
-            const POINT_4 = new NodePoint([4.3, 2.2]);
+    describe("findEndPlace", () => {
+        it("returns farthest place from startPlace", () => {
+            const PLACE_1 = getPointPlace([0.1, 5.3]);
+            const PLACE_2 = getPolygonPlace([
+                [[1.1, 5.4], [1.2, 5.5], [1.3, 5.6], [1.1, 5.4]], // eslint-disable-line prettier/prettier
+                [[1.1, 5.4], [1.2, 5.6], [1.3, 5.5], [1.1, 5.4]], // eslint-disable-line prettier/prettier
+            ]);
+            const PLACE_3 = getMultiPolygonPlace([
+                [
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                ],
+                [
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                    [[5.2, 0.2], [5.3, 5.5], [5.3, 5.6], [5.2, 0.2]], // eslint-disable-line prettier/prettier
+                ],
+            ]);
+            const PLACE_4 = getPointPlace([4.3, 2.2]);
 
             const state: StateSlice = {
-                pointsOfInterest: [POINT_1, POINT_2, POINT_3, POINT_4],
-                startPoint: START_POINT,
+                placesOfInterest: [PLACE_1, PLACE_2, PLACE_3, PLACE_4],
+                startPlace: START_POINT,
             };
 
-            const result = service.findRouteEndPoint(state);
-
-            expect(result).toBe(POINT_3);
+            expect(service.findEndPlace(state)).toBe(PLACE_3);
         });
 
-        it("returns null when pointsOfInterest is empty", async () => {
+        it("returns null when placesOfInterest is empty", () => {
             const state: StateSlice = {
-                pointsOfInterest: [],
-                startPoint: START_POINT,
+                placesOfInterest: [],
+                startPlace: START_POINT,
             };
 
-            const result = service.findRouteEndPoint(state);
-
-            expect(result).toBe(null);
+            expect(service.findEndPlace(state)).toBe(null);
         });
 
-        it("returns null when pointsOfInterest has only startPoint item", async () => {
+        it("returns null when placesOfInterest has only startPlace item", () => {
             const state: StateSlice = {
-                pointsOfInterest: [START_POINT],
-                startPoint: START_POINT,
+                placesOfInterest: [START_POINT],
+                startPlace: START_POINT,
             };
 
-            const result = service.findRouteEndPoint(state);
-
-            expect(result).toBe(null);
-        });
-
-        it("returns null when pointsOfInterest has no node points", async () => {
-            const state: StateSlice = {
-                pointsOfInterest: [new RelationPoint([0.1, 2.3]), new RelationPoint([1.1, 2.4])],
-                startPoint: START_POINT,
-            };
-
-            const result = service.findRouteEndPoint(state);
-
-            expect(result).toBe(null);
+            expect(service.findEndPlace(state)).toBe(null);
         });
     });
 });

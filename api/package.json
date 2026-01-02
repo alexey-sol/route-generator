@@ -48,6 +48,7 @@
         "dotenv": "16.4.7",
         "langchain": "1.1.1",
         "langchain-gigachat": "0.0.14",
+        "osmtogeojson": "3.0.0-beta.5",
         "reflect-metadata": "0.2.2",
         "route-generator-util": "0.0.0",
         "rxjs": "7.8.1"
