@@ -26,6 +26,8 @@ export const baseEslintConfig = defineConfig({
         "no-console": ["error", { allow: ["error"] }],
         "no-implicit-coercion": ["error", { allow: ["!!"] }],
         "unicorn/filename-case": ["error", { case: "kebabCase" }],
+        "unicorn/no-array-for-each": "off",
+        "unicorn/no-array-reduce": "off",
         "unicorn/prevent-abbreviations": "off",
     },
     settings: {

@@ -1,28 +1,38 @@
-import { MIN_ROUTE_COUNT, MODEL_TEMPERATURE } from "./const";
+import { MIN_ROUTE_COUNT } from "./const";
 import { IsochroneService } from "./service/isochrone.service";
+import { PlacePropertiesService } from "./service/place-properties.service";
 import { PlacesOfInterestService } from "./service/places-of-interest.service";
 import { RouteBoundingBoxService } from "./service/route-bounding-box.service";
 import { RouteGeneratorService } from "./service/route-generator.service";
 import { Coordinates, WalkingRouteState } from "./type";
 import { getPointPlace, NoRouteEndPlaceFoundError, WalkingRouteStateAnnotation } from "./util";
-import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
-import { END, START, StateGraph } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
-import { CallbackHandler } from "@langfuse/langchain";
-import { HttpStatus, Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { DEFAULT_LANGUAGE } from "@/const";
+import { END, type RetryPolicy, START, StateGraph } from "@langchain/langgraph";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { AxiosError } from "axios";
-import { ReactAgent } from "langchain";
-import { AppConfig } from "src/config/config.type";
 
 const INITIAL_RETRY_INTERVAL_MS = 1_000;
+const MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class WalkingRouteService {
-    private readonly agent: ReactAgent;
+    private addPlaceTeasers = async (state: WalkingRouteState) => ({
+        routes: await this.placePropertiesService.addPlaceTeasers(state),
+    });
 
-    private filterPlacesOfInterest = (state: WalkingRouteState) => {
-        const endPlace = this.routeBoundingBoxService.findEndPlace(state);
+    private getIsochrone = async (state: WalkingRouteState) => ({
+        isochrone: await this.isochroneService.getIsochrone(state),
+    });
+
+    private getPlacesOfInterest = async ({ isochrone, startPlace }: WalkingRouteState) => {
+        const placesOfInterest = await this.placesOfInterestService.getPlacesOfInterest({
+            isochrone,
+        });
+
+        const endPlace = this.routeBoundingBoxService.findEndPlace({
+            placesOfInterest,
+            startPlace,
+        });
 
         if (!endPlace) {
             throw new NoRouteEndPlaceFoundError();
@@ -30,8 +40,8 @@ export class WalkingRouteService {
 
         const routablePlaces = this.routeBoundingBoxService.filterPlacesOutsideBoundingBox({
             endPlace,
-            placesOfInterest: state.placesOfInterest,
-            startPlace: state.startPlace,
+            placesOfInterest,
+            startPlace,
         });
 
         return {
@@ -40,19 +50,20 @@ export class WalkingRouteService {
         };
     };
 
-    private getIsochrone = async (state: WalkingRouteState) => ({
-        isochrone: await this.isochroneService.getIsochrone(state),
-    });
-
-    private getPlacesOfInterest = async (state: WalkingRouteState) => ({
-        placesOfInterest: await this.placesOfInterestService.getPlacesOfInterest(state),
-    });
-
-    private getRoutes = (state: WalkingRouteState) => {
+    private getRetryPolicy = (): RetryPolicy => {
         return {
-            routes: this.routeGeneratorService.generateRoutes(state),
+            initialInterval: INITIAL_RETRY_INTERVAL_MS,
+            maxAttempts: MAX_ATTEMPTS,
+            retryOn: (error: AxiosError) =>
+                error instanceof AxiosError &&
+                !!error.status &&
+                error.status >= HttpStatus.INTERNAL_SERVER_ERROR,
         };
     };
+
+    private getRoutes = (state: WalkingRouteState) => ({
+        routes: this.routeGeneratorService.generateRoutes(state),
+    });
 
     private getRouteWaypoints = (state: WalkingRouteState) => {
         // TODO implement; pass routes
@@ -65,60 +76,32 @@ export class WalkingRouteService {
     };
 
     private readonly chain = new StateGraph(WalkingRouteStateAnnotation)
-        .addNode("getIsochrone", this.getIsochrone)
-        .addNode("getPlacesOfInterest", this.getPlacesOfInterest, {
-            retryPolicy: {
-                initialInterval: INITIAL_RETRY_INTERVAL_MS,
-                maxAttempts: 5,
-                retryOn: (error: AxiosError) => {
-                    return (
-                        error instanceof AxiosError &&
-                        !!error.status &&
-                        error.status >= HttpStatus.INTERNAL_SERVER_ERROR
-                    );
-                },
-            },
+        .addNode("getIsochrone", this.getIsochrone, {
+            retryPolicy: this.getRetryPolicy(),
         })
-        .addNode("filterPlacesOfInterest", this.filterPlacesOfInterest)
+        .addNode("getPlacesOfInterest", this.getPlacesOfInterest, {
+            retryPolicy: this.getRetryPolicy(),
+        })
         .addNode("getRoutes", this.getRoutes)
+        .addNode("addPlaceTeasers", this.addPlaceTeasers, {
+            retryPolicy: this.getRetryPolicy(),
+        })
         .addNode("getRouteWaypoints", this.getRouteWaypoints)
         .addEdge(START, "getIsochrone")
         .addEdge("getIsochrone", "getPlacesOfInterest")
-        .addEdge("getPlacesOfInterest", "filterPlacesOfInterest")
-        .addEdge("filterPlacesOfInterest", "getRoutes")
-        .addEdge("getRoutes", "getRouteWaypoints")
-        // TODO обогатить route points описанием от ЛЛМ
+        .addEdge("getPlacesOfInterest", "getRoutes")
+        .addEdge("getRoutes", "addPlaceTeasers")
+        .addEdge("addPlaceTeasers", "getRouteWaypoints")
         .addEdge("getRouteWaypoints", END)
         .compile();
-
-    private readonly langfuseHandler: BaseCallbackHandler;
-
-    private readonly logger = new Logger(WalkingRouteService.name);
-
-    private readonly model: ChatOpenAI;
 
     constructor(
         private readonly isochroneService: IsochroneService,
         private readonly placesOfInterestService: PlacesOfInterestService,
         private readonly routeBoundingBoxService: RouteBoundingBoxService,
         private readonly routeGeneratorService: RouteGeneratorService,
-        configService: ConfigService<AppConfig, true>,
-    ) {
-        const { apiKey, baseUrl, model } = configService.get("openAi", { infer: true });
-
-        this.model = new ChatOpenAI({
-            configuration: {
-                apiKey,
-                baseURL: baseUrl,
-            },
-            model,
-            temperature: MODEL_TEMPERATURE,
-        });
-
-        this.langfuseHandler = new CallbackHandler({
-            tags: ["chat-test"],
-        }) as BaseCallbackHandler;
-    }
+        private readonly placePropertiesService: PlacePropertiesService,
+    ) {}
 
     async generateRoutes(
         startCoordinates: Coordinates,
@@ -127,7 +110,12 @@ export class WalkingRouteService {
     ) {
         const startPlace = getPointPlace(startCoordinates);
 
-        const state = await this.chain.invoke({ routeCount, startPlace, travelTimeInSec });
+        const state = await this.chain.invoke({
+            language: DEFAULT_LANGUAGE,
+            routeCount,
+            startPlace,
+            travelTimeInSec,
+        });
 
         return state.routeWaypoints;
     }

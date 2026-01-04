@@ -1,4 +1,4 @@
-export const MODEL_TEMPERATURE = 0;
+export const MODEL_TEMPERATURE = 1;
 
 export const MIN_ROUTE_COUNT = 1;
 

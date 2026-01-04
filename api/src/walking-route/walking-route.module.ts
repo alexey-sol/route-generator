@@ -1,4 +1,5 @@
 import { IsochroneService } from "./service/isochrone.service";
+import { PlacePropertiesService } from "./service/place-properties.service";
 import { PlacesOfInterestService } from "./service/places-of-interest.service";
 import { RouteBoundingBoxService } from "./service/route-bounding-box.service";
 import { RouteGeneratorService } from "./service/route-generator.service";
@@ -35,6 +36,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
         PlacesOfInterestService,
         RouteBoundingBoxService,
         RouteGeneratorService,
+        PlacePropertiesService,
     ],
 })
 export class WalkingRouteModule {}

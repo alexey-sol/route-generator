@@ -55,6 +55,7 @@ type FeatureProperties = {
     id?: string;
     name?: string;
     official_name?: string;
+    teaser?: string;
 };
 
 type OSMFeatureType = "node" | "relation" | "way";

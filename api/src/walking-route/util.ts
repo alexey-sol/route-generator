@@ -12,6 +12,7 @@ import { Annotation } from "@langchain/langgraph";
 export const WalkingRouteStateAnnotation = Annotation.Root({
     endPlace: Annotation<AnyPlace>,
     isochrone: Annotation<Isochrone>,
+    language: Annotation<string>,
     placesOfInterest: Annotation<AnyPlace[]>,
     routeCount: Annotation<number>,
     routes: Annotation<Route[]>,
