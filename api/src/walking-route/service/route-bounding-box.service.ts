@@ -1,4 +1,5 @@
 import { type AnyPlace, type PointPlace, type WalkingRouteState } from "../type";
+import { findNearestPoint } from "../util";
 import { getDistance } from "@/util/helpers";
 import { Injectable } from "@nestjs/common";
 import { bbox, bboxPolygon, booleanIntersects, featureCollection, Units } from "@turf/turf";
@@ -10,42 +11,42 @@ const ANGLE_UNITS: Units = "radians";
 @Injectable()
 export class RouteBoundingBoxService {
     filterPlacesOutsideBoundingBox = ({
-        endPlace,
+        endPoint,
         placesOfInterest,
-        startPlace,
+        startPoint,
     }: Pick<
         WalkingRouteState,
-        "endPlace" | "placesOfInterest" | "startPlace"
+        "endPoint" | "placesOfInterest" | "startPoint"
     >): WalkingRouteState["placesOfInterest"] => {
-        const routeBoundingBox = bbox(featureCollection([startPlace, endPlace]));
+        const routeBoundingBox = bbox(featureCollection([startPoint, endPoint]));
 
         const routablePlaces = placesOfInterest.filter((place) => {
             return (
-                this.isValidDistance(startPlace, place) &&
+                this.isValidDistance(startPoint, place) &&
                 booleanIntersects(place, bboxPolygon(routeBoundingBox))
             );
         });
 
-        return routablePlaces.toSorted(this.sortPlacesByDistanceTo(startPlace));
+        return routablePlaces.toSorted(this.sortPlacesByDistanceTo(startPoint));
     };
 
-    findEndPlace = ({
+    findEndPoint = ({
         placesOfInterest,
-        startPlace,
-    }: Pick<WalkingRouteState, "placesOfInterest" | "startPlace">): AnyPlace | null => {
+        startPoint,
+    }: Pick<WalkingRouteState, "placesOfInterest" | "startPoint">): null | PointPlace => {
         let maxDistance = DEFAULT_DISTANCE;
-        let endPlace: AnyPlace | null = null;
+        let baseEndPoint: AnyPlace | null = null;
 
         for (const place of placesOfInterest) {
-            const fromToDistance = getDistance(startPlace, place, DISTANCE_UNITS);
+            const fromToDistance = getDistance(startPoint, place, DISTANCE_UNITS);
 
             if (fromToDistance > maxDistance) {
                 maxDistance = fromToDistance;
-                endPlace = place;
+                baseEndPoint = place;
             }
         }
 
-        return endPlace;
+        return baseEndPoint && findNearestPoint(baseEndPoint, startPoint);
     };
 
     /**

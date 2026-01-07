@@ -1,8 +1,9 @@
 import { IsochroneService } from "./service/isochrone.service";
-import { PlacePropertiesService } from "./service/place-properties.service";
 import { PlacesOfInterestService } from "./service/places-of-interest.service";
 import { RouteBoundingBoxService } from "./service/route-bounding-box.service";
 import { RouteGeneratorService } from "./service/route-generator.service";
+import { RoutePointPropertiesService } from "./service/route-point-properties.service";
+import { RouteWaypointService } from "./service/route-waypoint.service";
 import { WalkingRouteController } from "./walking-route.controller";
 import { WalkingRouteService } from "./walking-route.service";
 import { ProcessConfigService } from "@/config/config.service";
@@ -36,7 +37,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
         PlacesOfInterestService,
         RouteBoundingBoxService,
         RouteGeneratorService,
-        PlacePropertiesService,
+        RoutePointPropertiesService,
+        RouteWaypointService,
     ],
 })
 export class WalkingRouteModule {}

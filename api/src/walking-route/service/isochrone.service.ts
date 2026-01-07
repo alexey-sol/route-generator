@@ -1,9 +1,5 @@
-import {
-    type Isochrone,
-    type ORSIsochroneRequest,
-    type ORSIsochroneResponse,
-    type WalkingRouteState,
-} from "../type";
+import { ROUTE_PROFILE } from "../const";
+import { type Isochrone, type ORSIsochroneRequest, type WalkingRouteState } from "../type";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { AxiosError } from "axios";
@@ -16,33 +12,29 @@ export class IsochroneService {
     constructor(private readonly httpService: HttpService) {}
 
     getIsochrone = async (
-        state: Pick<WalkingRouteState, "startPlace" | "travelTimeInSec">,
+        state: Pick<WalkingRouteState, "startPoint" | "travelTimeInSec">,
     ): Promise<Isochrone> => {
-        return this.fetchFootWalkingIsochrone(this.mapRequest(state));
+        return this.fetchIsochrone(this.mapRequest(state));
     };
 
-    private async fetchFootWalkingIsochrone(
-        request: ORSIsochroneRequest,
-    ): Promise<ORSIsochroneResponse> {
+    private async fetchIsochrone(request: ORSIsochroneRequest): Promise<Isochrone> {
         const { data } = await firstValueFrom(
-            this.httpService
-                .post<ORSIsochroneResponse>("/v2/isochrones/foot-walking", request)
-                .pipe(
-                    catchError((error: AxiosError) => {
-                        this.logger.error(error.response?.data);
-                        throw error;
-                    }),
-                ),
+            this.httpService.post<Isochrone>(`/v2/isochrones/${ROUTE_PROFILE}`, request).pipe(
+                catchError((error: AxiosError) => {
+                    this.logger.error(error.response?.data);
+                    throw error;
+                }),
+            ),
         );
 
         return data;
     }
 
     private mapRequest = ({
-        startPlace,
+        startPoint,
         travelTimeInSec,
-    }: Pick<WalkingRouteState, "startPlace" | "travelTimeInSec">): ORSIsochroneRequest => ({
-        locations: [startPlace.geometry.coordinates],
+    }: Pick<WalkingRouteState, "startPoint" | "travelTimeInSec">): ORSIsochroneRequest => ({
+        locations: [startPoint.geometry.coordinates],
         range: [travelTimeInSec, travelTimeInSec],
     });
 }

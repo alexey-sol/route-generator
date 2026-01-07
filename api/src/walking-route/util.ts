@@ -1,28 +1,24 @@
 import {
     type AnyPlace,
-    type Coordinates,
     type Isochrone,
     type MultiPolygonPlace,
     type PointPlace,
     type PolygonPlace,
     type Route,
 } from "./type";
+import { isPointFeature } from "@/util/guards";
 import { Annotation } from "@langchain/langgraph";
+import { explode, nearestPoint } from "@turf/turf";
 
 export const WalkingRouteStateAnnotation = Annotation.Root({
-    endPlace: Annotation<AnyPlace>,
+    endPoint: Annotation<PointPlace>,
     isochrone: Annotation<Isochrone>,
     language: Annotation<string>,
     placesOfInterest: Annotation<AnyPlace[]>,
     routeCount: Annotation<number>,
+    // routes: Annotation<Route[]>,
     routes: Annotation<Route[]>,
-    routeWaypoints: Annotation<
-        Array<{
-            route: Route;
-            waypoints: Coordinates[];
-        }>
-    >,
-    startPlace: Annotation<PointPlace>,
+    startPoint: Annotation<PointPlace>,
     travelTimeInSec: Annotation<number>,
 });
 
@@ -71,7 +67,7 @@ export class NoBoundingBoxProvidedError extends Error {
 /**
  * The error indicates that the user is in the middle of nowhere or their walk is too short.
  */
-export class NoRouteEndPlaceFoundError extends Error {
+export class NoRouteEndPointFoundError extends Error {
     constructor(message = "No route end point found") {
         super(message);
     }
@@ -83,3 +79,18 @@ export class NotUniqueRouteError extends Error {
         super(message);
     }
 }
+
+/**
+ * Converts a complex feature (like a polygon or a multipolygon) to a point. The result is the nearest point to
+ * the target, which is basically the nearest part of a, say, building.
+ * There may be corner cases to this algorithm: for example, the result point may turn out to be not the
+ * entrance to the building but just its wall or a corner.
+ * TODO also should look into this https://github.com/Turfjs/turf/issues/252#issuecomment-520502653
+ */
+export const findNearestPoint = (place: AnyPlace, target: PointPlace): PointPlace => {
+    if (isPointFeature(place)) {
+        return place;
+    }
+
+    return nearestPoint(target, explode(place));
+};

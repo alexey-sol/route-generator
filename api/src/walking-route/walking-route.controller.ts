@@ -1,4 +1,3 @@
-import { type Coordinates } from "./type";
 import { WalkingRouteService } from "./walking-route.service";
 import { Body, Controller, HttpCode, Optional, Post } from "@nestjs/common";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsNumber } from "class-validator";
@@ -12,7 +11,7 @@ export class GetRouteRequest {
     @ArrayMaxSize(2)
     @ArrayMinSize(2)
     @IsArray()
-    startCoordinates: Coordinates;
+    startCoordinates: [longitude: number, latitude: number];
 
     @IsNumber()
     travelTimeInSec: number;

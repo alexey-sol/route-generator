@@ -1,5 +1,5 @@
 import { MODEL_TEMPERATURE } from "../const";
-import { AnyPlace, Route, WalkingRouteState } from "../type";
+import { type OpenAiResponse, type PointPlace, type Route, type WalkingRouteState } from "../type";
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import { ChatOpenAI } from "@langchain/openai";
 import { CallbackHandler } from "@langfuse/langchain";
@@ -13,12 +13,13 @@ import { AppConfig } from "src/config/config.type";
 const INVOKE_CONCURRENCY_LIMIT = 5;
 const SYSTEM_PROMPT =
     "You'll get a location name. With this name, come up with a teaser message to describe the location. The teaser should feel calm and mysterious, but it shouldn't be more than 10 words";
+const TEASER_DELIMITER = ". ";
 
 @Injectable()
-export class PlacePropertiesService {
+export class RoutePointPropertiesService {
     private readonly agent: ReactAgent;
 
-    private readonly logger = new Logger(PlacePropertiesService.name);
+    private readonly logger = new Logger(RoutePointPropertiesService.name);
 
     constructor(configService: ConfigService<AppConfig, true>) {
         const { apiKey, baseUrl, model } = configService.get("openAi", { infer: true });
@@ -38,21 +39,21 @@ export class PlacePropertiesService {
         });
     }
 
-    addPlaceTeasers = async ({
+    addPointTeasers = async ({
         language,
         routes,
     }: Pick<WalkingRouteState, "language" | "routes">): Promise<WalkingRouteState["routes"]> => {
         const langfuseHandler = new CallbackHandler({
             sessionId: randomUUID(),
-            tags: ["addPlaceTeasers"],
+            tags: ["addPointTeasers"],
         }) as BaseCallbackHandler;
 
-        const placePool = this.getDistinctPlacePool(routes);
+        const pointPool = this.getDistinctPointPool(routes);
 
         const limit = pLimit(INVOKE_CONCURRENCY_LIMIT);
 
-        const tasks = placePool.map((item) =>
-            limit(async () => {
+        const tasks = pointPool.map((item) => {
+            return limit(async () => {
                 const name = item.properties?.official_name || item.properties?.name;
 
                 if (!name) {
@@ -70,44 +71,55 @@ export class PlacePropertiesService {
                     { callbacks: [langfuseHandler] },
                 );
 
-                const teaser = response.messages.at(-1)?.content;
+                return this.mapResponse(response, item);
+            });
+        });
 
-                return {
-                    ...item,
-                    properties: {
-                        ...item.properties,
-                        teaser: typeof teaser === "string" ? teaser : undefined,
-                    },
-                };
-            }),
-        );
+        const updatedPointPool = await Promise.all(tasks);
 
-        const updatedPlacePool = await Promise.all(tasks);
-
-        return this.mapRoutes(routes, updatedPlacePool);
+        return this.mapRoutes(routes, updatedPointPool);
     };
 
-    private getDistinctPlacePool = (routes: Route[]): AnyPlace[] => {
-        const omitStartPlace = (route: Route) => route.slice(1);
-        const placePool = routes.flatMap(omitStartPlace);
+    private getDistinctPointPool = (routes: Route[]): Route["points"] => {
+        const omitStartPoint = (route: Route) => route.points.slice(1);
+        const pointPool = routes.flatMap(omitStartPoint);
 
-        return [...new Map(placePool.map((item) => [item.id, item])).values()];
+        return [...new Map(pointPool.map((item) => [item.id, item])).values()];
     };
 
-    private mapRoutes = (routes: Route[], placePool: AnyPlace[]): Route[] => {
-        const mapIdToPlace: Record<number, AnyPlace> = {};
+    private mapResponse = (response: OpenAiResponse, point: PointPlace) => {
+        const content = response.messages.at(-1)?.content;
+        const teaser = typeof content === "string" ? content : content?.join(TEASER_DELIMITER);
 
-        for (const place of placePool) {
-            if (place.id) {
-                mapIdToPlace[place.id] = place;
+        return {
+            ...point,
+            properties: {
+                ...point.properties,
+                teaser,
+            },
+        };
+    };
+
+    private mapRoutes = (routes: Route[], pointPool: PointPlace[]): Route[] => {
+        const mapIdToPoint: Record<number, PointPlace> = {};
+
+        for (const point of pointPool) {
+            if (point.id) {
+                mapIdToPoint[point.id] = point;
             }
         }
 
         return routes.map((route) => {
-            return route.map((place) => ({
-                ...place,
-                properties: place.id ? mapIdToPlace[place.id]?.properties : place.properties,
-            }));
+            return {
+                ...route,
+                points: route.points.map((point) => {
+                    const properties = point.id
+                        ? mapIdToPoint[point.id]?.properties
+                        : point.properties;
+
+                    return { ...point, properties };
+                }),
+            };
         });
     };
 }

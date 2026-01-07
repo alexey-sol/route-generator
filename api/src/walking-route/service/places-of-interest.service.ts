@@ -26,10 +26,10 @@ export class PlacesOfInterestService {
         private readonly httpService: HttpService,
     ) {}
 
-    getPlacesOfInterest = async (
-        state: Pick<WalkingRouteState, "isochrone">,
-    ): Promise<WalkingRouteState["placesOfInterest"]> => {
-        const response = await this.fetchPlacesOfInterest(this.mapRequest(state));
+    getPlacesOfInterest = async ({
+        isochrone,
+    }: Pick<WalkingRouteState, "isochrone">): Promise<WalkingRouteState["placesOfInterest"]> => {
+        const response = await this.fetchPlacesOfInterest(this.mapRequest(isochrone));
 
         return this.mapResponse(response);
     };
@@ -63,9 +63,7 @@ export class PlacesOfInterestService {
             ] ?? [],
     });
 
-    private mapRequest = ({
-        isochrone,
-    }: Pick<WalkingRouteState, "isochrone">): OverpassInstanceRequest => {
+    private mapRequest = (isochrone: WalkingRouteState["isochrone"]): OverpassInstanceRequest => {
         const { boundingBox, coordinates } = this.mapIsochrone(isochrone);
 
         const overpassCoordinates = coordinates.map(([longitude, latitude]) => [
