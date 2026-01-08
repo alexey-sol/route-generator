@@ -16,7 +16,6 @@ export const WalkingRouteStateAnnotation = Annotation.Root({
     language: Annotation<string>,
     placesOfInterest: Annotation<AnyPlace[]>,
     routeCount: Annotation<number>,
-    // routes: Annotation<Route[]>,
     routes: Annotation<Route[]>,
     startPoint: Annotation<PointPlace>,
     travelTimeInSec: Annotation<number>,
@@ -92,5 +91,8 @@ export const findNearestPoint = (place: AnyPlace, target: PointPlace): PointPlac
         return place;
     }
 
-    return nearestPoint(target, explode(place));
+    const point = nearestPoint(target, explode(place));
+    point.id = place.id; // conversion doesn't preserve ID, so we need to assign it explicitly
+
+    return point;
 };

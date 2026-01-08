@@ -55,7 +55,7 @@ describe("RouteBoundingBoxService", () => {
             expect(service.findEndPoint(state)).toBe(null);
         });
 
-        it("returns null when placesOfInterest has only startPoint item", () => {
+        it("returns null when placesOfInterest has only start point", () => {
             const state: StateSlice = {
                 placesOfInterest: [START_POINT],
                 startPoint: START_POINT,

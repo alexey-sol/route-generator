@@ -62,7 +62,7 @@ export class RouteGeneratorService {
 
     private hasDuplicates = (route: BaseRoute, endPoint: WalkingRouteState["endPoint"]) => {
         const hasDuplicatePlaces = new Set(route.map(({ id }) => id)).size !== route.length;
-        const hasDuplicateEndPoint = route.at(-1)?.id === endPoint.id;
+        const hasDuplicateEndPoint = route.some((point) => point.id === endPoint.id);
 
         return hasDuplicatePlaces || hasDuplicateEndPoint;
     };
@@ -75,8 +75,8 @@ export class RouteGeneratorService {
             return true;
         }
 
-        return existingRoutes.some(
-            (existingRoute) => existingRoute[FIRST_PLACE_INDEX].id !== route[FIRST_PLACE_INDEX].id,
+        return !existingRoutes.some(
+            (existingRoute) => existingRoute[FIRST_PLACE_INDEX].id === route[FIRST_PLACE_INDEX].id,
         );
     };
 

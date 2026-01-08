@@ -48,3 +48,9 @@ export const getDistance = (from: PointPlace, to: AnyPlace, units: Units): numbe
 
     return 0;
 };
+
+export const range = (start: number, end: number, step = 1) => {
+    const length = Math.ceil((end - start) / step);
+
+    return Array.from({ length }, (_, index) => start + index * step);
+};

@@ -92,6 +92,7 @@
         "testEnvironment": "node",
         "transformIgnorePatterns": [
             "<rootDir>/node_modules/(?!(@langchain|route-generator-util)/)"
-        ]
+        ],
+        "clearMocks": true
     }
 }
