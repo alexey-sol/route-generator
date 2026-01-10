@@ -4,6 +4,13 @@ import {
     type WalkingRouteState,
 } from "../type";
 import { NoBoundingBoxProvidedError } from "../util";
+import {
+    ISOCHRONE_COORDINATES_INDEX,
+    ISOCHRONE_FEATURES_INDEX,
+    OR,
+    OVERPASS_TIMEOUT_SEC,
+    PLACE_GROUPS,
+} from "./places-of-interest.const";
 import { AppConfig } from "@/config/config.type";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
@@ -11,11 +18,6 @@ import { ConfigService } from "@nestjs/config";
 import { AxiosError } from "axios";
 import osmtogeojson from "osmtogeojson";
 import { catchError, firstValueFrom } from "rxjs";
-
-const OVERPASS_AMENITIES = ["police", "fire_station", "school"]; // TODO adjust
-const OVERPASS_TIMEOUT_SEC = 60;
-const ISOCHRONE_FEATURES_INDEX = 0;
-const ISOCHRONE_COORDINATES_INDEX = 0;
 
 @Injectable()
 export class PlacesOfInterestService {
@@ -81,14 +83,18 @@ export class PlacesOfInterestService {
         const overpassBoundingBoxAsString = overpassBoundingBox.join(",");
 
         const overpassCoordinatesAsString = overpassCoordinates.flat().join(" ");
-        const amenitiesAsRegExpString = OVERPASS_AMENITIES.join("|");
 
         return {
             data:
                 `[bbox: ${overpassBoundingBoxAsString}]` +
                 "[out:json]" +
                 `[timeout:${OVERPASS_TIMEOUT_SEC}];` +
-                `nwr[amenity~"${amenitiesAsRegExpString}"](poly:"${overpassCoordinatesAsString}");` +
+                `nwr(poly:"${overpassCoordinatesAsString}")->.boundary;` +
+                `nwr.boundary[amenity~"${PLACE_GROUPS.AMENITIES.join(OR)}"];` +
+                `nwr.boundary[historic~"${PLACE_GROUPS.HISTORIC.join(OR)}"];` +
+                `nwr.boundary[leisure~"${PLACE_GROUPS.LEISURE.join(OR)}"];` +
+                `nwr.boundary[natural~"${PLACE_GROUPS.NATURAL.join(OR)}"];` +
+                `nwr.boundary[tourism~"${PLACE_GROUPS.TOURISM.join(OR)}"];` +
                 "out geom;",
         };
     };
