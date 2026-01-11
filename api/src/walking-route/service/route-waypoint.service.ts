@@ -3,11 +3,13 @@ import {
     type ORSDirectionRequest,
     type ORSDirectionResponse,
     type PointPlace,
+    type Route,
     type WalkingRouteState,
 } from "../type";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { AxiosError } from "axios";
+import { type Position } from "geojson";
 import pLimit from "p-limit";
 import { catchError, firstValueFrom } from "rxjs";
 
@@ -28,13 +30,19 @@ export class RouteWaypointService {
 
         const tasks = routes.map(({ points }) => {
             return limit(async () => {
-                const response = await this.fetchDirection(this.mapRequest(points, language));
+                const waypoints = await this.getRouteWaypoints(points, language);
 
-                return this.mapResponse(response, points);
+                return { points, waypoints } satisfies Route;
             });
         });
 
         return Promise.all(tasks);
+    };
+
+    getRouteWaypoints = async (points: PointPlace[], language?: string): Promise<Position[]> => {
+        const response = await this.fetchDirection(this.mapRequest(points, language));
+
+        return this.mapResponse(response);
     };
 
     private async fetchDirection(request: ORSDirectionRequest): Promise<ORSDirectionResponse> {
@@ -54,19 +62,13 @@ export class RouteWaypointService {
 
     private mapRequest = (
         points: PointPlace[],
-        language: WalkingRouteState["language"],
+        language?: WalkingRouteState["language"],
     ): ORSDirectionRequest => ({
         coordinates: points.map((item) => item.geometry.coordinates),
         language,
     });
 
-    private mapResponse = (
-        response: ORSDirectionResponse,
-        points: PointPlace[],
-    ): WalkingRouteState["routes"][number] => {
-        return {
-            points,
-            waypoints: response.features[DIRECTION_FEATURE_INDEX].geometry?.coordinates ?? [],
-        };
+    private mapResponse = (response: ORSDirectionResponse): Position[] => {
+        return response.features[DIRECTION_FEATURE_INDEX].geometry?.coordinates ?? [];
     };
 }

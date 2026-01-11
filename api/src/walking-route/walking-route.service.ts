@@ -5,13 +5,18 @@ import { RouteBoundingBoxService } from "./service/route-bounding-box.service";
 import { RouteGeneratorService } from "./service/route-generator.service";
 import { RoutePointPropertiesService } from "./service/route-point-properties.service";
 import { RouteWaypointService } from "./service/route-waypoint.service";
-import { type Route, type WalkingRouteState } from "./type";
-import { getPointPlace, NoRouteEndPointFoundError, WalkingRouteStateAnnotation } from "./util";
+import { PointPlace, type Route, type WalkingRouteState } from "./type";
+import {
+    DeleteRoutePointRequest,
+    getPointPlace,
+    GetRouteRequest,
+    NoRouteEndPointFoundError,
+    WalkingRouteStateAnnotation,
+} from "./util";
 import { DEFAULT_LANGUAGE } from "@/const";
 import { END, type RetryPolicy, START, StateGraph } from "@langchain/langgraph";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { AxiosError } from "axios";
-import { type Position } from "geojson";
 
 const INITIAL_RETRY_INTERVAL_MS = 1_000;
 const MAX_ATTEMPTS = 5;
@@ -102,13 +107,30 @@ export class WalkingRouteService {
         private readonly routeWaypointService: RouteWaypointService,
     ) {}
 
-    async generateRoutes(
-        startCoordinates: Position,
-        travelTimeInSec: number,
+    async deleteRoutePoint({
+        currentCoordinates,
+        language = DEFAULT_LANGUAGE,
+        pointIdToDelete,
+        routePoints,
+    }: DeleteRoutePointRequest): Promise<Route> {
+        const points: PointPlace[] = [
+            getPointPlace(currentCoordinates),
+            ...this.getPointsAfterTarget(routePoints, pointIdToDelete),
+        ];
+
+        const waypoints = await this.routeWaypointService.getRouteWaypoints(points, language);
+
+        return { points, waypoints };
+    }
+
+    async generateRoutes({
+        language = DEFAULT_LANGUAGE,
         routeCount = MIN_ROUTE_COUNT,
-    ): Promise<Route[]> {
+        startCoordinates,
+        travelTimeInSec,
+    }: GetRouteRequest): Promise<Route[]> {
         const state = await this.chain.invoke({
-            language: DEFAULT_LANGUAGE,
+            language,
             routeCount,
             startPoint: getPointPlace(startCoordinates),
             travelTimeInSec,
@@ -116,4 +138,17 @@ export class WalkingRouteService {
 
         return state.routes;
     }
+
+    private getPointsAfterTarget = (
+        points: PointPlace[],
+        targetId: NonNullable<PointPlace["id"]>,
+    ): PointPlace[] => {
+        const index = points.findIndex((item) => item.id === targetId);
+
+        if (index === -1) {
+            return points;
+        }
+
+        return points.slice(index + 1);
+    };
 }

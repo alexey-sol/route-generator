@@ -9,6 +9,14 @@ import {
 import { isPointFeature } from "@/util/guards";
 import { Annotation } from "@langchain/langgraph";
 import { explode, nearestPoint } from "@turf/turf";
+import {
+    ArrayMaxSize,
+    ArrayMinSize,
+    IsArray,
+    IsNumber,
+    IsOptional,
+    IsString,
+} from "class-validator";
 
 export const WalkingRouteStateAnnotation = Annotation.Root({
     endPoint: Annotation<PointPlace>,
@@ -96,3 +104,38 @@ export const findNearestPoint = (place: AnyPlace, target: PointPlace): PointPlac
 
     return point;
 };
+
+export class DeleteRoutePointRequest {
+    @ArrayMaxSize(2)
+    @ArrayMinSize(2)
+    @IsArray()
+    currentCoordinates: [longitude: number, latitude: number];
+
+    @IsOptional()
+    @IsString()
+    language?: string;
+
+    @IsString()
+    pointIdToDelete: NonNullable<PointPlace["id"]>;
+
+    @IsArray()
+    routePoints: PointPlace[];
+}
+
+export class GetRouteRequest {
+    @IsOptional()
+    @IsString()
+    language?: string;
+
+    @IsNumber()
+    @IsOptional()
+    routeCount?: number;
+
+    @ArrayMaxSize(2)
+    @ArrayMinSize(2)
+    @IsArray()
+    startCoordinates: [longitude: number, latitude: number];
+
+    @IsNumber()
+    travelTimeInSec: number;
+}
